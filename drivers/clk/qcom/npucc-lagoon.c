@@ -17,7 +17,7 @@
 #include "clk-rcg.h"
 #include "common.h"
 #include "reset.h"
-#include "vdd-level-lagoon.h"
+#include "vdd-level-lito.h"
 
 static DEFINE_VDD_REGULATORS(vdd_cx, VDD_NUM, 1, vdd_corner);
 
@@ -103,10 +103,6 @@ static const u32 crc_reg_val[] = {
 	CRC_MND_CFG_SETTING, CRC_SID_FSM_CTRL_SETTING,
 };
 
-static struct pll_vco fabia_vco[] = {
-	{ 249600000, 2000000000, 0 },
-};
-
 /* 537.60MHz Configuration */
 static struct alpha_pll_config npu_cc_pll0_config = {
 	.l = 0x1C,
@@ -123,8 +119,6 @@ static struct alpha_pll_config npu_cc_pll0_config = {
 
 static struct clk_alpha_pll npu_cc_pll0 = {
 	.offset = 0x0,
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.config = &npu_cc_pll0_config,
 	.clkr = {
@@ -158,8 +152,6 @@ static struct alpha_pll_config npu_cc_pll1_config = {
 
 static struct clk_alpha_pll npu_cc_pll1 = {
 	.offset = 0x400,
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.config = &npu_cc_pll1_config,
 	.clkr = {
@@ -193,8 +185,6 @@ static struct alpha_pll_config npu_q6ss_pll_config = {
 
 static struct clk_alpha_pll npu_q6ss_pll = {
 	.offset = 0x0,
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.config = &npu_q6ss_pll_config,
 	.clkr = {
@@ -585,6 +575,10 @@ static struct clk_branch npu_cc_xo_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "npu_cc_xo_clk",
+			.parent_names = (const char *[]){
+				"npu_cc_xo_clk_src",
+			},
+			.num_parents = 1,
 			.flags = CLK_IS_CRITICAL | CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
