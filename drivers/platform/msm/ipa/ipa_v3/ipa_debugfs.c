@@ -721,8 +721,7 @@ static ssize_t ipa3_read_rt(struct file *file, char __user *ubuf, size_t count,
 	list_for_each_entry(tbl, &set->head_rt_tbl_list, link) {
 		i = 0;
 		list_for_each_entry(entry, &tbl->head_rt_rule_list, link) {
-			if (entry->proc_ctx &&
-				(!ipa3_check_idr_if_freed(entry->proc_ctx))) {
+			if (entry->proc_ctx) {
 				ofst = entry->proc_ctx->offset_entry->offset;
 				ofst_words =
 					(ofst +
@@ -1146,7 +1145,6 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		"lan_repl_rx_empty=%u\n"
 		"flow_enable=%u\n"
 		"flow_disable=%u\n",
-		"rx_page_drop_cnt=%u\n",
 		ipa3_ctx->stats.tx_sw_pkts,
 		ipa3_ctx->stats.tx_hw_pkts,
 		ipa3_ctx->stats.tx_non_linear,
@@ -1162,8 +1160,7 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		ipa3_ctx->stats.lan_rx_empty,
 		ipa3_ctx->stats.lan_repl_rx_empty,
 		ipa3_ctx->stats.flow_enable,
-		ipa3_ctx->stats.flow_disable,
-		ipa3_ctx->stats.rx_page_drop_cnt);
+		ipa3_ctx->stats.flow_disable);
 	cnt += nbytes;
 
 	for (i = 0; i < IPAHAL_PKT_STATUS_EXCEPTION_MAX; i++) {
