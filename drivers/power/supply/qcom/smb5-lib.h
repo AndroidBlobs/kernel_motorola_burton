@@ -14,6 +14,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/consumer.h>
 #include <linux/extcon-provider.h>
+#include <linux/usb/usbpd.h>
 #include "storm-watch.h"
 #include "battery.h"
 
@@ -93,6 +94,7 @@ enum print_reason {
 #define SDP_CURRENT_UA			500000
 #define CDP_CURRENT_UA			1500000
 #define DCP_CURRENT_UA			1500000
+#define HVDCP_2_CURRENT_UA		1500000
 #define HVDCP_CURRENT_UA		3000000
 #define TYPEC_DEFAULT_CURRENT_UA	900000
 #define TYPEC_MEDIUM_CURRENT_UA		1500000
@@ -556,7 +558,6 @@ struct smb_charger {
 	int			charge_full_cc;
 	int			cc_soc_ref;
 	int			last_cc_soc;
-	int			term_vbat_uv;
 	int			usbin_forced_max_uv;
 	int			init_thermal_ua;
 	u32			comp_clamp_level;
@@ -577,6 +578,11 @@ struct smb_charger {
 
 	/* extcon for VBUS / ID notification to USB for uUSB */
 	struct extcon_dev	*extcon;
+
+	/* USB PD interactions */
+	struct usbpd		*pd;
+	int			pd_contract_uv;
+	struct delayed_work	pd_contract_work;
 
 	/* battery profile */
 	int			batt_profile_fcc_ua;
@@ -698,6 +704,10 @@ int smblib_get_prop_dc_present(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_dc_online(struct smb_charger *chg,
 				union power_supply_propval *val);
+int smblib_get_prop_dc_current_now(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_set_prop_dc_current_now(struct smb_charger *chg,
+				const union power_supply_propval *val);
 int smblib_get_prop_dc_current_max(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_set_prop_dc_current_max(struct smb_charger *chg,
@@ -711,6 +721,9 @@ int smblib_get_prop_voltage_wls_output(struct smb_charger *chg,
 int smblib_set_prop_voltage_wls_output(struct smb_charger *chg,
 				const union power_supply_propval *val);
 int smblib_set_prop_dc_reset(struct smb_charger *chg);
+int smblib_set_prop_dc_en(struct smb_charger *chg,
+				    const union power_supply_propval *val);
+int smblib_set_prop_dc_aicl_rerun(struct smb_charger *chg);
 int smblib_get_prop_usb_present(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_usb_online(struct smb_charger *chg,

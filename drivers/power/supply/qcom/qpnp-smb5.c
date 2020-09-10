@@ -1277,9 +1277,7 @@ static int smb5_usb_main_get_prop(struct power_supply *psy,
 		val->intval = chg->flash_active;
 		break;
 	case POWER_SUPPLY_PROP_FLASH_TRIGGER:
-		val->intval = 0;
-		if (chg->chg_param.smb_version == PMI632_SUBTYPE)
-			rc = schgm_flash_get_vreg_ok(chg, &val->intval);
+		rc = schgm_flash_get_vreg_ok(chg, &val->intval);
 		break;
 	case POWER_SUPPLY_PROP_TOGGLE_STAT:
 		val->intval = 0;
@@ -1303,7 +1301,7 @@ static int smb5_usb_main_get_prop(struct power_supply *psy,
 		break;
 	/* Use this property to report SMB health */
 	case POWER_SUPPLY_PROP_HEALTH:
-		rc = val->intval = smblib_get_prop_smb_health(chg);
+		val->intval = smblib_get_prop_smb_health(chg);
 		break;
 	/* Use this property to report overheat status */
 	case POWER_SUPPLY_PROP_HOT_TEMP:
@@ -1314,10 +1312,12 @@ static int smb5_usb_main_get_prop(struct power_supply *psy,
 		rc = -EINVAL;
 		break;
 	}
-	if (rc < 0)
+	if (rc < 0) {
 		pr_debug("Couldn't get prop %d rc = %d\n", psp, rc);
+		return -ENODATA;
+	}
 
-	return rc;
+	return 0;
 }
 
 static int smb5_usb_main_set_prop(struct power_supply *psy,
@@ -1481,12 +1481,15 @@ static enum power_supply_property smb5_dc_props[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_INPUT_VOLTAGE_REGULATION,
 	POWER_SUPPLY_PROP_REAL_TYPE,
 	POWER_SUPPLY_PROP_DC_RESET,
 	POWER_SUPPLY_PROP_AICL_DONE,
+	POWER_SUPPLY_PROP_PIN_ENABLED,
+	POWER_SUPPLY_PROP_RERUN_AICL,
 };
 
 static int smb5_dc_get_prop(struct power_supply *psy,
@@ -1510,6 +1513,9 @@ static int smb5_dc_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		rc = smblib_get_prop_dc_voltage_now(chg, val);
 		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		rc = smblib_get_prop_dc_current_now(chg, val);
+		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = smblib_get_prop_dc_current_max(chg, val);
 		break;
@@ -1527,6 +1533,12 @@ static int smb5_dc_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_AICL_DONE:
 		val->intval = chg->dcin_aicl_done;
+		break;
+	case POWER_SUPPLY_PROP_PIN_ENABLED:
+		val->intval = 0;
+		break;
+	case POWER_SUPPLY_PROP_RERUN_AICL:
+		val->intval = 0;
 		break;
 	default:
 		return -EINVAL;
@@ -1551,6 +1563,9 @@ static int smb5_dc_set_prop(struct power_supply *psy,
 		rc = vote(chg->dc_suspend_votable, WBC_VOTER,
 				(bool)val->intval, 0);
 		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		rc = smblib_set_prop_dc_current_now(chg, val);
+		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = smblib_set_prop_dc_current_max(chg, val);
 		break;
@@ -1559,6 +1574,12 @@ static int smb5_dc_set_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_DC_RESET:
 		rc = smblib_set_prop_dc_reset(chg);
+		break;
+	case POWER_SUPPLY_PROP_PIN_ENABLED:
+		rc = smblib_set_prop_dc_en(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_RERUN_AICL:
+		rc = smblib_set_prop_dc_aicl_rerun(chg);
 		break;
 	default:
 		return -EINVAL;
@@ -1929,8 +1950,8 @@ static int smb5_batt_prop_is_writeable(struct power_supply *psy,
 }
 
 static const struct power_supply_desc batt_psy_desc = {
-	.name = "battery",
-	.type = POWER_SUPPLY_TYPE_BATTERY,
+	.name = "qcom_battery",
+	.type = POWER_SUPPLY_TYPE_MAIN,
 	.properties = smb5_batt_props,
 	.num_properties = ARRAY_SIZE(smb5_batt_props),
 	.get_property = smb5_batt_get_prop,
@@ -2138,6 +2159,19 @@ static int smb5_configure_typec(struct smb_charger *chg)
 				rc);
 			return rc;
 		}
+	}
+
+	/*
+	 * Config SCHG_P_TYPEC_TYPE_C_CCOUT_CONTROL to 0x17
+	 * Enable detection of debug accessory in sink mode
+	 */
+	rc = smblib_masked_write(chg, TYPE_C_DEBUG_ACCESS_SINK_REG,
+				      TYPEC_DEBUG_ACCESS_SINK_MASK, 0x17);
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't configure TYPE_C_DEBUG_ACCESS_SINK_REG rc=%d\n",
+				rc);
+		return rc;
 	}
 
 	/* Enable detection of unoriented debug accessory in source mode */
