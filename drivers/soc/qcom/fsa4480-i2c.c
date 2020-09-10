@@ -118,7 +118,7 @@ static int fsa4480_usbc_event_changed(struct notifier_block *nb,
 		dev_dbg(dev, "%s: queueing usbc_analog_work\n",
 			__func__);
 		pm_stay_awake(fsa_priv->dev);
-		queue_work(system_freezable_wq, &fsa_priv->usbc_analog_work);
+		schedule_work(&fsa_priv->usbc_analog_work);
 		break;
 	default:
 		break;
@@ -356,6 +356,8 @@ static int fsa4480_probe(struct i2c_client *i2c,
 {
 	struct fsa4480_priv *fsa_priv;
 	int rc = 0;
+
+	return 0;
 
 	fsa_priv = devm_kzalloc(&i2c->dev, sizeof(*fsa_priv),
 				GFP_KERNEL);
