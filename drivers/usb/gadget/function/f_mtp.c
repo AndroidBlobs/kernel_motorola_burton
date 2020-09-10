@@ -944,10 +944,6 @@ static void receive_file_work(struct work_struct *data)
 		mtp_log("- count(%lld) not multiple of mtu(%d)\n",
 						count, dev->ep_out->maxpacket);
 	mutex_lock(&dev->read_mutex);
-	if (dev->state == STATE_OFFLINE) {
-		r = -EIO;
-		goto fail;
-	}
 	while (count > 0 || write_req) {
 		if (count > 0) {
 			/* queue a request */
@@ -1030,7 +1026,6 @@ static void receive_file_work(struct work_struct *data)
 			read_req = NULL;
 		}
 	}
-fail:
 	mutex_unlock(&dev->read_mutex);
 	mtp_log("returning %d\n", r);
 	/* write the result */
@@ -1852,6 +1847,13 @@ static struct usb_function_instance *mtp_alloc_inst(void)
 static int mtp_ctrlreq_configfs(struct usb_function *f,
 				const struct usb_ctrlrequest *ctrl)
 {
+	if (!f || !f->config) {
+		pr_err("%s: Invalid input for %s function\n",
+			__func__, (f && f->name)? f->name : "unknown");
+
+		return -EINVAL;
+	}
+
 	return mtp_ctrlrequest(f->config->cdev, ctrl);
 }
 

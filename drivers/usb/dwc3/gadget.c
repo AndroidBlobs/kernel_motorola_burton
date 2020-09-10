@@ -809,7 +809,6 @@ out:
 
 static void dwc3_remove_requests(struct dwc3 *dwc, struct dwc3_ep *dep)
 {
-	int retries = 40;
 	struct dwc3_request		*req;
 
 	dbg_log_string("START for %s(%d)", dep->name, dep->number);
@@ -828,14 +827,6 @@ static void dwc3_remove_requests(struct dwc3 *dwc, struct dwc3_ep *dep)
 		dwc->eps[0]->trb_enqueue = 0;
 		dwc->eps[1]->trb_enqueue = 0;
 	}
-
-	do {
-		udelay(50);
-	} while ((dep->flags & DWC3_EP_END_TRANSFER_PENDING) && --retries);
-
-	if (!retries)
-		dbg_log_string("ep end_xfer cmd completion timeout for %d",
-				dep->number);
 
 	/* - giveback all requests to gadget driver */
 	while (!list_empty(&dep->started_list)) {
@@ -4032,6 +4023,7 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	dwc->gadget.sg_supported        = true;
 	dwc->gadget.name                = "dwc3-gadget";
 	dwc->gadget.is_otg              = dwc->dr_mode == USB_DR_MODE_OTG;
+	dwc->gadget.lpm_capable		= true;
 
 	/*
 	 * FIXME We might be setting max_speed to <SUPER, however versions

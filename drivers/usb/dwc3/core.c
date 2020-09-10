@@ -841,6 +841,7 @@ static void dwc3_set_incr_burst_type(struct dwc3 *dwc)
 	ret = device_property_read_u32_array(dev,
 			"snps,incr-burst-type-adjustment", vals, ntype);
 	if (ret) {
+		kfree(vals);
 		dev_err(dev, "Error to get property\n");
 		return;
 	}
@@ -1069,19 +1070,6 @@ int dwc3_core_init(struct dwc3 *dwc)
 		reg |= DWC3_GUCTL3_USB20_RETRY_DISABLE;
 		dwc3_writel(dwc->regs, DWC3_GUCTL3, reg);
 	}
-
-	if (dwc->gen2_tx_de_emph != -1)
-		dwc3_writel(dwc->regs, DWC31_LCSR_TX_DEEMPH(0),
-			dwc->gen2_tx_de_emph & DWC31_TX_DEEMPH_MASK);
-	if (dwc->gen2_tx_de_emph1 != -1)
-		dwc3_writel(dwc->regs, DWC31_LCSR_TX_DEEMPH_1(0),
-			dwc->gen2_tx_de_emph1 & DWC31_TX_DEEMPH_MASK);
-	if (dwc->gen2_tx_de_emph2 != -1)
-		dwc3_writel(dwc->regs, DWC31_LCSR_TX_DEEMPH_2(0),
-			dwc->gen2_tx_de_emph2 & DWC31_TX_DEEMPH_MASK);
-	if (dwc->gen2_tx_de_emph3 != -1)
-		dwc3_writel(dwc->regs, DWC31_LCSR_TX_DEEMPH_3(0),
-			dwc->gen2_tx_de_emph3 & DWC31_TX_DEEMPH_MASK);
 
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_RESET_EVENT, 0);
 
@@ -1335,22 +1323,6 @@ static void dwc3_get_properties(struct dwc3 *dwc)
 
 	dwc->dis_metastability_quirk = device_property_read_bool(dev,
 				"snps,dis_metastability_quirk");
-
-	dwc->gen2_tx_de_emph = -1;
-	device_property_read_u32(dev, "snps,gen2-tx-de-emph",
-			&dwc->gen2_tx_de_emph);
-
-	dwc->gen2_tx_de_emph1 = -1;
-	device_property_read_u32(dev, "snps,gen2-tx-de-emph1",
-			&dwc->gen2_tx_de_emph1);
-
-	dwc->gen2_tx_de_emph2 = -1;
-	device_property_read_u32(dev, "snps,gen2-tx-de-emph2",
-			&dwc->gen2_tx_de_emph2);
-
-	dwc->gen2_tx_de_emph3 = -1;
-	device_property_read_u32(dev, "snps,gen2-tx-de-emph3",
-			&dwc->gen2_tx_de_emph3);
 
 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
 	dwc->tx_de_emphasis = tx_de_emphasis;
